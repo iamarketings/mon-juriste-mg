@@ -9,7 +9,7 @@ from urllib.robotparser import RobotFileParser
 import requests
 
 LOG = logging.getLogger(__name__)
-USER_AGENT = "MonJurisCollect/0.1 (public legal corpus; sequential requests)"
+USER_AGENT = "MonJuristeCollect/0.1 (public legal corpus; sequential requests)"
 ALLOWED_HOSTS = {"cnlegis.gov.mg", "www.cnlegis.gov.mg"}
 
 

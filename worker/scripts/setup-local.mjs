@@ -21,7 +21,7 @@ for (const file of [...files, ...migrations]) {
   console.log(`Import D1 local : ${file.slice(root.length + 1)}`);
   const result = spawnSync(
     process.execPath,
-    [wrangler, "d1", "execute", "monjuris-local", "--local", `--file=${file}`],
+    [wrangler, "d1", "execute", "monjuris-db", "--local", `--file=${file}`],
     { cwd: root, encoding: "utf8", stdio: ["ignore", "ignore", "pipe"] },
   );
   if (result.error) throw result.error;
