@@ -4,6 +4,19 @@ Pipeline locale de collecte des textes juridiques publics de [CNLEGIS Madagascar
 
 Application publique : [monjuris-mg.aheshman-itibar.workers.dev](https://monjuris-mg.aheshman-itibar.workers.dev/)
 
+## Aperçu de l'application
+
+Une réponse juridique issue de la version publique, avec ses articles et ses liens vers les textes consultés :
+
+![Mon juriste sur ordinateur : réponse juridique et sources](docs/screenshots/desktop-reponse.jpg)
+
+<p align="center">
+  <img src="docs/screenshots/mobile-assistant.jpg" alt="Accueil de l'assistant juridique sur mobile" width="290" />
+  <img src="docs/screenshots/mobile-reponse.jpg" alt="Réponse juridique et citations sur mobile" width="290" />
+</p>
+
+Les [six captures originales](docs/screenshots/README.md) sont disponibles pour présenter le projet sur un portfolio ou sur LinkedIn.
+
 L'interface est une PWA installable conçue mobile-first. Avant le premier usage, elle demande le nom, l'adresse e-mail et le téléphone de l'utilisateur avec son accord explicite. Les coordonnées et un hash du jeton d'accès sont stockés dans D1 ; le navigateur conserve le profil et le jeton brut dans `localStorage` afin de ne pas redemander l'inscription sur le même appareil.
 
 Le périmètre initial est volontairement limité à :
