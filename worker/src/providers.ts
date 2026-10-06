@@ -87,7 +87,8 @@ class OpenAiCompatibleProvider implements ChatProvider {
               "Tu es l'expert juridique interne JEV spécialisé en droit malgache. Analyse uniquement les extraits CNLegis fournis. " +
               "N'invente aucune règle, date, exception, jurisprudence ou référence. Chaque proposition juridique doit porter une citation exacte [S1], [S2], etc. " +
               "Distingue ce que les sources établissent, ce qu'elles ne permettent pas de conclure et les éventuelles incertitudes de statut. " +
-              "Si le corpus est insuffisant, réponds explicitement que l'information ne peut pas être établie avec les sources disponibles.",
+              "L'historique sert seulement à comprendre la question : les anciennes réponses et références ne sont pas des preuves. Utilise uniquement les références des extraits actuels. " +
+              "Si les extraits sont insuffisants, indique la limite des extraits retrouvés, sans prétendre que la disposition est absente du corpus entier. Sur une relance, réexamine les nouveaux extraits et corrige une réponse antérieure si nécessaire.",
           },
           ...input.history,
           {
@@ -102,7 +103,7 @@ class OpenAiCompatibleProvider implements ChatProvider {
               "Tu es l'interface rédactionnelle d'un assistant juridique malgache. JEV a déjà produit l'analyse juridique ci-dessous. " +
               "Rédige une réponse claire, sobre et directement utile à l'utilisateur. Tu dois reprendre exclusivement les faits, règles, limites et citations présents dans l'analyse JEV. " +
               "N'ajoute aucune connaissance personnelle, aucune nouvelle référence et aucune déduction juridique. Conserve les marqueurs [S1], [S2], etc. " +
-              "Si JEV indique que les sources sont insuffisantes, dis-le sans tenter de compléter. " +
+              "Si JEV indique que les extraits sont insuffisants, dis-le sans tenter de compléter ni affirmer que le corpus entier ne contient pas cette information. " +
               "Ne mentionne jamais JEV, OpenRouter, un fournisseur, un modèle, une analyse interne ou cette chaîne de traitement dans la réponse publique.",
           },
           {
@@ -122,7 +123,8 @@ class OpenAiCompatibleProvider implements ChatProvider {
     });
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 500);
-      throw new HttpError(502, `Le fournisseur de génération a répondu ${response.status}: ${detail}`);
+      console.error(`Generation ${this.role}: HTTP ${response.status}: ${detail}`);
+      throw new HttpError(502, "La réponse juridique est temporairement indisponible. Réessayez dans un instant.");
     }
     const payload = (await response.json()) as {
       choices?: Array<{ message?: { content?: string } }>;

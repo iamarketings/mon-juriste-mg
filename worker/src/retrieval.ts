@@ -51,18 +51,49 @@ export function normalizeLimit(limit: unknown): number {
   return limit as number;
 }
 
-function ftsExpression(query: string): string {
-  const tokens = query
-    .normalize("NFKC")
-    .match(/[\p{L}\p{N}][\p{L}\p{N}'’.-]*/gu)
-    ?.map((token) => token.replaceAll('"', '""'))
-    .filter((token) => token.length >= 2)
-    .slice(0, 16);
+const STOP_WORDS = new Set((
+  "de du des le la les un une au aux en et ou a à ce ces cet cette que qui quoi quel quels quelle quelles " +
+  "est sont etre être pour par sur dans avec sans se son sa ses il ils elle elles on nous vous mon ma mes " +
+  "ne pas plus rien tout tous toutes donne donnent dit disent prevoit prévoient corpus source sources " +
+  "tu es sur sûr sure sûre suis peux peut faire faut comment pourquoi stp merci seulement bien vraiment " +
+  "relatif relative relatives relatifs matiere matière general generale générales generale generales prevoient l d qu n"
+).split(" "));
 
-  if (!tokens?.length) {
+function queryTokens(query: string): string[] {
+  return [...new Set(query.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase()
+    .match(/[\p{L}\p{N}]+/gu)?.filter((token) => token.length >= 2 && !STOP_WORDS.has(token)) ?? [])].slice(0, 24);
+}
+
+function searchPlan(query: string): { expression: string; work: boolean } {
+  const tokens = queryTokens(query);
+  if (!tokens.length) {
     throw new HttpError(400, "La requête ne contient aucun terme recherchable.");
   }
-  return [...new Set(tokens)].map((token) => `"${token}"`).join(" OR ");
+  const work = tokens.some((token) => /^(?:cdd|cdi|travail|employeur|salarie|licenci)/.test(token));
+  const fixed = tokens.includes("cdd") || (tokens.includes("duree") && tokens.some((token) => /^determine/.test(token)));
+  const indefinite = tokens.includes("cdi") || tokens.some((token) => /^indetermine/.test(token));
+  const termination = tokens.some((token) => /^(?:ruptur|resili|licenci)/.test(token));
+  const safety = tokens.some((token) => /^(?:securit|sante|protect|risqu)/.test(token));
+  // Acronyms and inflections must match the actual provision text. Giving
+  // every document titled 'Code du travail' a strong title match hid these hits.
+  if (fixed || indefinite) {
+    const kind = fixed ? '("cdd" OR ("duree" AND "determin"*))' : '("cdi" OR ("duree" AND "indetermin"*))';
+    return { expression: `text:${kind} AND text:"contrat"*`, work };
+  }
+  if (termination) {
+    const anchor = work || tokens.includes("contrat") ? ' AND text:"contrat"*' : "";
+    return { expression: 'text:("ruptur"* OR "resili"* OR "licenci"* OR "cessation")' + anchor, work };
+  }
+  if (safety) {
+    return { expression: 'text:("secur"* OR "sant"* OR "protect"* OR "risqu"*)', work };
+  }
+  const focused = tokens.filter((token) => !["contrat", "travail", "employeur", "regles", "obligations", "code"].includes(token));
+  const selected = focused.length ? focused : tokens;
+  const stems: Record<string, string> = {
+    indemnites: "indemni", indemnite: "indemni", licenciement: "licenci", licenciements: "licenci",
+    obligations: "obligation", societes: "societ", societe: "societ", creation: "creat", salaries: "salari",
+  };
+  return { expression: selected.map((token) => stems[token] ? `"${stems[token]}"*` : `"${token}"`).join(" OR "), work };
 }
 
 function parseCategories(value: string): string[] {
@@ -104,12 +135,13 @@ async function lexicalSearch(
   limit: number,
   filters: RetrievalFilters,
 ): Promise<SearchResult[]> {
+  const plan = searchPlan(query);
   const clauses = ["chunks_fts MATCH ?", "v.is_current = 1"];
-  const bindings: unknown[] = [ftsExpression(query)];
+  const bindings: unknown[] = [plan.expression];
 
-  if (filters.category) {
+  if (filters.category || plan.work) {
     clauses.push("d.category = ?");
-    bindings.push(filters.category);
+    bindings.push(filters.category || "DROIT DU TRAVAIL");
   }
   if (filters.language) {
     clauses.push("v.language = ?");
@@ -138,7 +170,7 @@ async function lexicalSearch(
       v.language,
       v.legal_status,
       d.categories_json,
-      bm25(chunks_fts, 0.0, 1.0, 3.0, 2.0, 2.0) AS rank
+      bm25(chunks_fts, 0.0, 1.0, 0.15, 2.0, 2.0) AS rank
     FROM chunks_fts
     JOIN chunks AS c ON c.id = chunks_fts.chunk_id
     JOIN documents AS d ON d.id = c.document_id
@@ -264,17 +296,16 @@ async function expandAdjacentContext(
   ranked: SearchResult[],
   limit: number,
 ): Promise<SearchResult[]> {
-  const seed = ranked[0];
-  if (!seed || limit <= 1) return ranked.slice(0, limit);
-
-  // Legal provisions are normally split article by article. Keep most of the
-  // context budget for the continuous section around the strongest match,
-  // while preserving a few slots for other directly relevant results.
-  const contextBudget = Math.min(limit, Math.max(3, Math.ceil(limit * 0.75)));
-  const firstOrdinal = Math.max(0, seed.ordinal - 1);
-  const lastOrdinal = seed.ordinal + contextBudget - 2;
-
-  const response = await env.DB.prepare(`
+  if (!ranked.length || limit <= 1) return ranked.slice(0, limit);
+  // Preserve direct matches before adding context from several sections.
+  // One irrelevant seed must never consume most of the context budget.
+  const expanded = new Map(ranked.slice(0, Math.ceil(limit / 2)).map((result) => [result.chunkId, result]));
+  const seeds: SearchResult[] = [];
+  for (const result of ranked) {
+    if (!seeds.some((seed) => seed.versionId === result.versionId && Math.abs(seed.ordinal - result.ordinal) <= 2)) seeds.push(result);
+    if (seeds.length === 3) break;
+  }
+  const responses = await Promise.all(seeds.map((seed) => env.DB.prepare(`
     SELECT
       c.id AS chunk_id,
       c.document_id,
@@ -298,22 +329,24 @@ async function expandAdjacentContext(
       AND c.ordinal BETWEEN ? AND ?
       AND v.is_current = 1
     ORDER BY c.ordinal ASC
-    LIMIT ?
-  `).bind(seed.versionId, firstOrdinal, lastOrdinal, contextBudget).all<DbSearchRow>();
-
-  const expanded = new Map<string, SearchResult>();
-  for (const row of response.results) {
-    const original = ranked.find((result) => result.chunkId === row.chunk_id);
-    expanded.set(
-      row.chunk_id,
-      original ?? rowToResult(row, {}),
-    );
+  `).bind(seed.versionId, Math.max(0, seed.ordinal - 2), seed.ordinal + 2).all<DbSearchRow>()));
+  const neighbors = responses.map((response, index) => response.results.sort((a, b) =>
+    Math.abs(a.ordinal - seeds[index].ordinal) - Math.abs(b.ordinal - seeds[index].ordinal) || a.ordinal - b.ordinal));
+  for (let depth = 0; depth < 5 && expanded.size < limit; depth++) {
+    for (const rows of neighbors) {
+      const row = rows[depth];
+      if (row && !expanded.has(row.chunk_id)) {
+        expanded.set(row.chunk_id, ranked.find((result) => result.chunkId === row.chunk_id) ?? rowToResult(row, {}));
+      }
+      if (expanded.size === limit) break;
+    }
   }
   for (const result of ranked) {
     if (expanded.size >= limit) break;
     if (!expanded.has(result.chunkId)) expanded.set(result.chunkId, result);
   }
-  return [...expanded.values()].slice(0, limit);
+  const versionOrder = [...new Set([...expanded.values()].map((result) => result.versionId))];
+  return [...expanded.values()].sort((a, b) => versionOrder.indexOf(a.versionId) - versionOrder.indexOf(b.versionId) || a.ordinal - b.ordinal).slice(0, limit);
 }
 
 export async function retrieve(

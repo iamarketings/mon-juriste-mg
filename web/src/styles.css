@@ -232,6 +232,9 @@ button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visib
 .assistant-seal { width: 28px; height: 28px; display: grid; place-items: center; color: var(--green); background: var(--ivory); border: 1px solid #d8d2c4; border-radius: 50%; font: 700 9px/1 Georgia, serif; }
 .message-assistant-body { min-width: 0; padding: 1px 0 3px 10px; border-left: 2px solid #d9b5af; }
 .message-author { margin: 0 0 7px; color: var(--green); font-size: 12px; font-weight: 700; }
+.chat-error { padding: 12px; color: #7d2823; background: #fae9e6; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+.chat-error p { margin: 0 0 10px; overflow-wrap: anywhere; }
+.retry-button { min-height: 40px; padding: 6px 14px; color: #fff; background: var(--red); border: 0; border-radius: 8px; }
 .legal-markdown { color: var(--ink); font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
 .legal-markdown > :first-child { margin-top: 0; }
 .legal-markdown > :last-child { margin-bottom: 0; }

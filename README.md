@@ -105,6 +105,10 @@ Le contrat Cloudflare et les choix de provenance sont détaillés dans [docs/clo
 
 Le Worker TypeScript se trouve sous `worker/`. Wrangler lance Miniflare avec une base D1 et un bucket R2 strictement locaux. Workers AI n'est jamais appelé. Vectorize n'ayant pas de simulateur local, le développement utilise D1 FTS5 ; le code active la recherche hybride lorsqu'un binding Vectorize distant et un fournisseur d'embeddings compatible OpenAI sont configurés.
 
+La recherche lexicale développe les sigles CDD/CDI, ignore les mots courants et privilégie le contenu des articles. Elle conserve les correspondances directes et ajoute des articles voisins de plusieurs sections. L'interface demande jusqu'à 20 passages ; les relances courtes conservent le sujet de la conversation. Une recherche infructueuse ne prouve pas qu'une disposition est absente du corpus.
+
+L'historique est borné et nettoyé de ses listes de sources et de ses anciens marqueurs de citation avant génération. Les références de l'analyse sont contrôlées contre les passages actuels ; si la reformulation change les références, l'analyse sourcée est conservée. Ce contrôle porte sur les références et ne constitue pas une vérification indépendante de chaque interprétation juridique. L'interface affiche les erreurs avec un bouton « Réessayer ».
+
 Installer les dépendances, préparer D1 avec le corpus exporté, puis démarrer le serveur :
 
 ```powershell

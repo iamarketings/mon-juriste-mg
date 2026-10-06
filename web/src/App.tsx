@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import {
   AssistantRuntimeProvider,
+  ActionBarPrimitive,
   AuiIf,
   ComposerPrimitive,
+  ErrorPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
   useLocalRuntime,
@@ -80,8 +82,10 @@ const legalAdapter: ChatModelAdapter = {
     const registration = loadRegistration();
     if (!registration) throw new Error("Votre inscription est requise.");
     const turns = messages
-      .filter((message) => message.role === "user" || message.role === "assistant")
-      .map((message) => ({ role: message.role as "user" | "assistant", content: messageText(message) }))
+      .filter((message) => message.role === "user" || (message.role === "assistant" && message.status?.type === "complete"))
+      .map((message) => ({ role: message.role as "user" | "assistant", content: message.role === "assistant"
+        ? messageText(message).split(/\n#{1,6}\s+Sources consultées\s*\n/i)[0].slice(0, 4000)
+        : messageText(message) }))
       .filter((message) => message.content.length > 0);
     let latestUserIndex = -1;
     for (let index = turns.length - 1; index >= 0; index -= 1) {
@@ -100,10 +104,13 @@ const legalAdapter: ChatModelAdapter = {
         "content-type": "application/json",
         "x-monjuris-access": registration.accessToken,
       },
-      body: JSON.stringify({ query, history, limit: 12 }),
+      body: JSON.stringify({ query, history, limit: 20 }),
       signal: abortSignal,
+    }).catch((reason: unknown) => {
+      if (abortSignal.aborted) throw reason;
+      throw new Error("Connexion interrompue. Vérifiez votre connexion puis réessayez.");
     });
-    const data = (await response.json()) as ChatResponse;
+    const data = (await response.json().catch(() => ({}))) as ChatResponse;
     if (!response.ok || !data.answer) {
       if (response.status === 401) localStorage.removeItem(REGISTRATION_KEY);
       throw new Error(data.error || "La réponse juridique n’est pas disponible.");
@@ -248,7 +255,15 @@ function AssistantMessage() {
   return (
     <MessagePrimitive.Root className="message message-assistant">
       <div className="assistant-seal" aria-hidden="true">MJ</div>
-      <div className="message-assistant-body"><p className="message-author">Mon juriste</p><MessagePrimitive.Parts components={{ Text: LegalMarkdown }} /></div>
+      <div className="message-assistant-body">
+        <p className="message-author">Mon juriste</p><MessagePrimitive.Parts components={{ Text: LegalMarkdown }} />
+        <MessagePrimitive.Error>
+          <div className="chat-error" role="alert">
+            <p><ErrorPrimitive.Message /></p>
+            <ActionBarPrimitive.Reload className="retry-button">Réessayer</ActionBarPrimitive.Reload>
+          </div>
+        </MessagePrimitive.Error>
+      </div>
     </MessagePrimitive.Root>
   );
 }
@@ -280,7 +295,7 @@ function Composer() {
   return (
     <div className="composer-wrap">
       <ComposerPrimitive.Root className="composer">
-        <ComposerPrimitive.Input className="composer-input" placeholder="Votre question juridique…" aria-label="Question juridique" rows={1} unstable_insertNewlineOnTouchEnter />
+        <ComposerPrimitive.Input className="composer-input" placeholder="Votre question juridique…" aria-label="Question juridique" rows={1} maxLength={500} unstable_insertNewlineOnTouchEnter />
         <ComposerPrimitive.Send className="send-button" aria-label="Envoyer la question"><ArrowUp size={20} /></ComposerPrimitive.Send>
       </ComposerPrimitive.Root>
       <p className="composer-note">Vérifiez les sources citées avant toute décision.</p>
