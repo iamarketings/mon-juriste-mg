@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "monjuris-collect"
+version = "0.1.0"
+description = "Collecte traçable du droit malgache depuis CNLEGIS"
+requires-python = ">=3.11"
+dependencies = ["requests>=2.32,<3", "beautifulsoup4>=4.12,<5", "pypdf>=6,<7"]
+
+[project.optional-dependencies]
+ocr = ["pypdfium2>=4.30,<6", "Pillow>=10,<13"]
+
+[project.scripts]
+monjuris = "monjuris.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+monjuris = ["schema.sql"]

@@ -1,0 +1,14 @@
+# Copier vers .dev.vars uniquement pour tester OpenRouter depuis Miniflare.
+# Le mode mock défini dans wrangler.jsonc ne consomme aucun crédit.
+LLM_API_KEY=
+
+# Pour activer un fournisseur compatible OpenAI :
+# LLM_MODE=openai-compatible
+# LLM_BASE_URL=https://openrouter.ai/api/v1
+# FRONT_MODEL=inclusionai/ling-3.0-flash
+# JEV_MODEL=typesafe/jev-router
+
+# Facultatif : fournisseur externe d'embeddings compatible /v1/embeddings.
+# EMBEDDING_BASE_URL=http://127.0.0.1:8000/v1
+# EMBEDDING_MODEL=BAAI/bge-m3
+# EMBEDDING_API_KEY=

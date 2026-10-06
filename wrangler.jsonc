@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "monjuris-mg",
+  "main": "worker/src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/health", "/v1/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "monjuris-db",
+      "database_id": "01a823ff-6de2-415e-9f19-55e2e599bb63"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "DOCUMENTS",
+      "bucket_name": "monjuris-documents"
+    }
+  ],
+  "vars": {
+    "APP_ENV": "production",
+    "CORS_ORIGIN": "*",
+    "LLM_MODE": "openai-compatible",
+    "LLM_BASE_URL": "https://openrouter.ai/api/v1",
+    "FRONT_MODEL": "inclusionai/ling-3.0-flash",
+    "JEV_MODEL": "typesafe/jev-router",
+    "VECTOR_SEARCH_ENABLED": "false"
+  }
+}

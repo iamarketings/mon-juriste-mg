@@ -1,0 +1,34 @@
+{
+  "name": "monjuris-rag-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "build": "pnpm run build:web && pnpm run build:worker",
+    "build:web": "vite build --config web/vite.config.ts",
+    "build:worker": "wrangler deploy --dry-run --outdir .worker-dist",
+    "check": "tsc --noEmit && tsc -p web/tsconfig.json --noEmit",
+    "db:setup": "node worker/scripts/setup-local.mjs",
+    "dev": "pnpm run build:web && wrangler dev --local",
+    "web:dev": "vite --config web/vite.config.ts",
+    "test": "pnpm run build && node --test worker/test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261006.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "miniflare": "3.20250718.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.3",
+    "wrangler": "^4.147.0"
+  },
+  "dependencies": {
+    "@assistant-ui/react": "^0.15.25",
+    "@assistant-ui/react-markdown": "^0.14.19",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

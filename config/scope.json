@@ -1,0 +1,16 @@
+{
+  "source": "https://cnlegis.gov.mg/",
+  "themes": [
+    "DROIT CIVIL",
+    "DROIT DU TRAVAIL",
+    "DROIT COMMERCIAL",
+    "DROIT DES SOCIETES ET GROUPEMENTS"
+  ],
+  "languages": ["fr", "mg"],
+  "page_size": 50,
+  "delay_seconds": 1.5,
+  "timeout_seconds": 30,
+  "max_download_mb": 150,
+  "chunk_max_chars": 1800,
+  "chunk_overlap_chars": 200
+}

@@ -1,0 +1,16 @@
+data/
+research/
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+.worker-dist/
+web/dist/
+node_modules/
+/package-lock.json
+tmp/
