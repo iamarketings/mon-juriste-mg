@@ -13,7 +13,7 @@ export function normalizeHistory(history: unknown): ChatMessage[] {
     }
     // The UI's source appendix is presentation, not conversation or evidence.
     const content = message.role === "assistant"
-      ? message.content.split(/\n#{1,6}\s+Sources consultées\s*\n/i)[0].replace(/\[S\d+\]/g, "")
+      ? message.content.split(/\n#{1,6}\s+Sources consultées\s*\n/i)[0].replace(/\[\s*S\d+(?:\s*[,;]\s*S\d+)*\s*\]/g, "")
       : message.content;
     return { role: message.role, content: content.trim().slice(0, 4000) };
   });

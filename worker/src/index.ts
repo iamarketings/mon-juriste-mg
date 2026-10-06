@@ -20,7 +20,8 @@ function validateFilters(filters: RetrieveRequest["filters"]): RetrieveRequest["
 }
 
 function citationIds(answer: string): string[] {
-  return [...new Set(answer.match(/\[S\d+\]/g) ?? [])];
+  const groups = answer.match(/\[\s*S\d+(?:\s*[,;]\s*S\d+)*\s*\]/g) ?? [];
+  return [...new Set(groups.flatMap((group) => (group.match(/S\d+/g) ?? []).map((id) => `[${id}]`)))];
 }
 
 async function handleRetrieve(request: Request, env: Env): Promise<Response> {

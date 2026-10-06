@@ -259,7 +259,7 @@ test("la présentation conserve les preuves et les références inventées sont 
     reply("Les règles figurent dans les extraits [S1].");
     reply("User Safety: safe");
     const response = await request("/v1/chat", { query: "CDD", history: [
-      { role: "assistant", content: "Historique [S999].\n\n### Sources consultées\n" + "Lien inutile. ".repeat(500) },
+      { role: "assistant", content: "Historique [S999] et [S999, S1].\n\n### Sources consultées\n" + "Lien inutile. ".repeat(500) },
     ] });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).answer, "Les règles figurent dans les extraits [S1].");
@@ -268,6 +268,7 @@ test("la présentation conserve les preuves et les références inventées sont 
     assert.ok(history);
     assert.ok(!history.content.includes("Sources consultées"));
     assert.ok(!history.content.includes("[S999]"));
+    assert.ok(!history.content.includes("S999"));
     assert.ok(history.content.length <= 4000);
   });
   await t.test("une référence absente des extraits ne peut pas devenir publique", async () => {
@@ -275,6 +276,19 @@ test("la présentation conserve les preuves et les références inventées sont 
     const response = await request("/v1/chat", { query: "CDD" });
     assert.equal(response.status, 502);
     assert.match((await response.json()).error, /référence non vérifiable/);
+  });
+  await t.test("une citation regroupée ne peut pas dissimuler une référence inventée", async () => {
+    reply("Une règle sans preuve [S1, S999].");
+    const response = await request("/v1/chat", { query: "CDD" });
+    assert.equal(response.status, 502);
+    assert.match((await response.json()).error, /référence non vérifiable/);
+  });
+  await t.test("le regroupement de citations valides préserve la reformulation", async () => {
+    reply("Analyse sourcée [S1] et [S2].");
+    reply("Présentation sourcée [S1, S2].");
+    const response = await request("/v1/chat", { query: "CDD" });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).answer, "Présentation sourcée [S1, S2].");
   });
   fetchMock.assertNoPendingInterceptors();
   await Promise.all(observed);
